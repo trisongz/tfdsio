@@ -34,6 +34,7 @@ setup(
     version=version,
     description="tfdsio",
     long_description=long_description,
+    cmdclass={'install': install},
     long_description_content_type="text/markdown",
     author='Tri Songz',
     author_email='ts@growthengineai.com',
