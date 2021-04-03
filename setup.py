@@ -18,23 +18,11 @@ binary_names = [package_name]
 with open(os.path.join(root, 'README.md'), 'rb') as readme:
     long_description = readme.read().decode('utf-8')
 
-
-def _post_install():
-    import subprocess
-    python = sys.executable
-    subprocess.check_call([python, '-m', 'pip', 'install', 'git+https://github.com/trisongz/PyFunctional'], stdout=subprocess.DEVNULL)
-
-class install(_install):
-    def run(self):
-        _install.run(self)
-        self.execute(_post_install, (self.install_lib,), msg="Installating Requirements")
-
 setup(
     name=package_name,
     version=version,
     description="tfdsio",
     long_description=long_description,
-    cmdclass={'install': install},
     long_description_content_type="text/markdown",
     author='Tri Songz',
     author_email='ts@growthengineai.com',
@@ -42,7 +30,8 @@ setup(
     python_requires='>3.6',
     install_requires=[
         "tensorflow>=2.3.0",
-        "tensorflow_datasets>=4.2.0"
+        "tensorflow_datasets>=4.2.0",
+        "PyFunctional @ git+https://github.com/trisongz/PyFunctional"
     ],
     packages=packages,
     extras_require={
