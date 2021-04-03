@@ -188,7 +188,7 @@ class LazyTFDSIOLoader(object):
         """Returns a tf.data.Dataset for the given split."""
         split = self._map_split(split)
         input_context = (tf.distribute.InputContext(num_input_pipelines=shard_info.num_shards, input_pipeline_id=shard_info.index) if shard_info else None)
-        #builder = TFDSIOCorpus(config=self._config)
+        builder = TFDSIOCorpus(config=self._config)
         #builder = TFDSIOCorpus(data_dir=self.data_dir, config=self._config, version=self._config.version)
         if self._preprocessor:
             builder.set_preprocessor(self._preprocessor)
