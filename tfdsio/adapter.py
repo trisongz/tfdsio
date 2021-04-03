@@ -158,7 +158,6 @@ class LazyTFDSIOLoader(object):
         builder_key = (self.name, self.data_dir)
         if builder_key not in LazyTFDSIOLoader._MEMOIZED_BUILDERS:
             LazyTFDSIOLoader._MEMOIZED_BUILDERS[builder_key] = TFDSIOCorpus(config=self._config)
-            #LazyTFDSIOLoader._MEMOIZED_BUILDERS[builder_key] = TFDSIOCorpus(data_dir=self._config.data_dir, config=self._config, version=self._config.version)
         return LazyTFDSIOLoader._MEMOIZED_BUILDERS[builder_key]
 
     @property
@@ -189,7 +188,6 @@ class LazyTFDSIOLoader(object):
         split = self._map_split(split)
         input_context = (tf.distribute.InputContext(num_input_pipelines=shard_info.num_shards, input_pipeline_id=shard_info.index) if shard_info else None)
         builder = TFDSIOCorpus(config=self._config)
-        #builder = TFDSIOCorpus(data_dir=self.data_dir, config=self._config, version=self._config.version)
         if self._preprocessor:
             builder.set_preprocessor(self._preprocessor)
         builder.download_and_prepare()
