@@ -1,8 +1,8 @@
-import os, sys
+import os
+import sys
 import os.path
 
 from setuptools import setup, find_packages
-
 
 root = os.path.abspath(os.path.dirname(__file__))
 package_name = "tfdsio"
@@ -13,7 +13,6 @@ packages = find_packages(
 __version_info__ = (0, 0, 1)
 version = ".".join(map(str, __version_info__))
 binary_names = [package_name]
-
 
 with open(os.path.join(root, 'README.md'), 'rb') as readme:
     long_description = readme.read().decode('utf-8')
@@ -31,7 +30,7 @@ setup(
     install_requires=[
         "tensorflow>=2.3.0",
         "tensorflow_datasets>=4.2.0",
-        "git+https://github.com/trisongz/PyFunctional",
+        "PyFunctional @ git+https://github.com/trisongz/PyFunctional"
     ],
     packages=packages,
     extras_require={
