@@ -17,10 +17,10 @@ from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, S
 from tfdsio.dataset import TFDSIOConfig, TFDSIOCorpus
 
 try:
-    import t5
-    _TFDS_DATA_DIR_OVERRIDE = t5.seqio.utils._TFDS_DATA_DIR_OVERRIDE
-    _GLOBAL_CACHE_DIRECTORIES = t5.seqio.utils._GLOBAL_CACHE_DIRECTORIES
-    Vocabulary = t5.seqio.vocabularies.Vocabulary
+    import seqio
+    _TFDS_DATA_DIR_OVERRIDE = seqio.utils._TFDS_DATA_DIR_OVERRIDE
+    _GLOBAL_CACHE_DIRECTORIES = seqio.utils._GLOBAL_CACHE_DIRECTORIES
+    Vocabulary = seqio.vocabularies.Vocabulary
 except ImportError:
     _TFDS_DATA_DIR_OVERRIDE = None
     _GLOBAL_CACHE_DIRECTORIES = []
