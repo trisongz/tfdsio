@@ -36,7 +36,7 @@ setup(
     packages=packages,
     extras_require={
         'transformers': ['transformers', 'sentencepiece'],
-        't5': ['t5'],
+        't5': ['t5', 'seqio'],
     },
     entry_points={},
     classifiers=[
