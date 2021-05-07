@@ -220,20 +220,33 @@ class TFDSIOCorpus(tfds.core.GeneratorBasedBuilder):
     def _generate_examples(self, paths, extra=None, **kwargs):
         pipeline = _parsers[self.builder_config.dataset_format](paths)
         _do_preprocess = self.has_preprocessor
-        for idx, data in enumerate(pipeline):
+        idx = 0
+        for n, data in enumerate(pipeline):
             if _do_preprocess:
-                yield self.preprocessor(idx=idx, data=data, extra=extra, **kwargs)
-            else:
-                if data and isinstance(data, dict):
+                data = self.preprocessor(idx=idx, data=data, extra=extra, **kwargs)
+            if data:
+                if isinstance(data, dict):
                     if self.builder_config.datamap:
                         data = {v: data.get(k, '') for k,v in self.builder_config.datamap.items()}
                     yield idx, data
-                elif data and (isinstance(data, list) or isinstance(data, np.array)):
+                    idx += 1
+                
+                elif isinstance(data, (list, np.array)) and _do_preprocess:
+                    for ex in data:
+                        if self.builder_config.datamap:
+                            ex = {v: ex.get(k, '') for k,v in self.builder_config.datamap.items()}
+                        yield idx, ex
+                        idx += 1
+
+                elif isinstance(data, (list, np.array)):
                     data = {self.builder_config.features[x]: data[x] for x in enumerate(data)}
                     yield idx, data
-                elif data and (isinstance(data, int) or isinstance(data, float) or isinstance(data, str) or isinstance(data, bytes)):
+                    idx += 1
+                
+                elif isinstance(data, (int, float, str, bytes)):
                     data = {self.builder_config.features[0]: data}
                     yield idx, data
+                    idx += 1
 
     def _relative_data_dir(self, with_version=True):
         """Relative path of this dataset in data_dir."""

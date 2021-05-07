@@ -142,9 +142,15 @@ config
 
 ```python
 def preprocessor(idx: int, data: dict, extra: Optional[Filepath] = None, **kwargs):
+    # if return_data is a list, will create an example per item in list
+    return_data = []
+    # do stuff
+    return return_data
+
+    # if return_data is a dict, only one example will be created
     return_data = {}
     # do stuff
-    yield idx, return_data
+    return return_data
 
 dataset = tfds_dataset(dataset_config, preprocessor=preprocessor)
 ```

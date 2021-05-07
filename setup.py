@@ -11,7 +11,7 @@ packages = find_packages(
     include=[package_name, "{}.*".format(package_name)]
 )
 
-__version_info__ = (0, 0, 2)
+__version_info__ = (0, 0, 3)
 version = ".".join(map(str, __version_info__))
 binary_names = [package_name]
 
@@ -29,7 +29,7 @@ setup(
     url='http://github.com/trisongz/tfdsio',
     python_requires='>3.6',
     install_requires=[
-        "tensorflow>=2.3.0",
+        "tensorflow>=1.15.0",
         "tensorflow_datasets>=4.2.0",
         "PyFunctional @ git+https://github.com/trisongz/PyFunctional"
     ],
