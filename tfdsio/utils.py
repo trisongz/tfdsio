@@ -1,12 +1,7 @@
 import os
 import time
 
-#try:
-#    from functional.io import File
-#except ImportError:
-#    os.system('pip install PyFunctional @ git+https://github.com/trisongz/PyFunctional')
-
-from functional.io import File
+from fileio import File
 
 
 _tfdsio_dir = os.path.abspath(os.path.dirname(__file__))
