@@ -32,6 +32,9 @@ setup(
         "tensorflow>=1.15.0",
         "tensorflow_datasets>=4.2.0",
         "file-io>=0.0.9",
+        "seqio",
+        "t5",
+        "sentencepiece",
     ],
     packages=packages,
     extras_require={

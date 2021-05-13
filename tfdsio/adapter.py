@@ -7,6 +7,7 @@ import inspect
 import json
 import os
 import re
+import functools
 
 from absl import logging
 import dataclasses
@@ -16,15 +17,48 @@ import tensorflow_datasets as tfds
 from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional, Sequence, Tuple, Type, Union
 from tfdsio.dataset import TFDSIOConfig, TFDSIOCorpus
 
-try:
-    import seqio
-    _TFDS_DATA_DIR_OVERRIDE = seqio.utils._TFDS_DATA_DIR_OVERRIDE
-    _GLOBAL_CACHE_DIRECTORIES = seqio.utils._GLOBAL_CACHE_DIRECTORIES
-    Vocabulary = seqio.vocabularies.Vocabulary
-except ImportError:
-    _TFDS_DATA_DIR_OVERRIDE = None
-    _GLOBAL_CACHE_DIRECTORIES = []
-    Vocabulary = Any
+#try:
+import t5
+import seqio
+from pprint import pprint
+from fileio import File
+from sentencepiece import sentencepiece_model_pb2 as model
+from tensorflow.python.compat.v2_compat import enable_v2_behavior
+
+_vocab_path = None
+_num_extra_ids = 100
+_default_sp_models = {
+    'default': {
+        'path': 'gs://t5-data/vocabs/cc_all.32000/sentencepiece.model',
+        'size': 32000
+    },
+    'multi': {
+        'path': 'gs://t5-data/vocabs/mc4.250000.100extra/sentencepiece.model',
+        'size': 250000
+    }
+}
+
+#_dataset_mixtures = {}
+_dataset_registry = []
+_dataset_mixtures = {}
+
+_TFDS_DATA_DIR_OVERRIDE = seqio.utils._TFDS_DATA_DIR_OVERRIDE
+_GLOBAL_CACHE_DIRECTORIES = seqio.utils._GLOBAL_CACHE_DIRECTORIES
+Vocabulary = seqio.vocabularies.Vocabulary
+
+#_seqio_enabled = True
+#except ImportError:
+#    _TFDS_DATA_DIR_OVERRIDE = None
+#    _GLOBAL_CACHE_DIRECTORIES = []
+#    Vocabulary = Any
+#    _seqio_enabled = False
+#
+#try:
+#    import t5
+#    _t5_enabled = True
+#except ImportError:
+#    t5 = None
+#    _t5_enabled = False
 
 @dataclasses.dataclass(frozen=True)
 class Feature:
@@ -450,3 +484,299 @@ class T5DataSource(DataSource):
     def list_shards(self, split: str) -> Sequence[str]:
         return self.tfds_dataset.files(split)
 
+
+def load_sp_model(model_path):
+    m = model.ModelProto()
+    m.ParseFromString(File.rb(model_path).read())
+    return m
+
+def calculate_extra_ids(show_extra=False):
+    global _num_extra_ids
+    m = load_sp_model(_vocab_path)
+    sp_size = len(m.pieces)
+    _resize = True
+    if sp_size > _default_sp_models['multi']['size']:
+        base_size = _default_sp_models['multi']['size']
+    elif sp_size > _default_sp_models['default']['size']:
+        base_size = _default_sp_models['default']['size']
+    else:
+        _resize = False
+        base_size = sp_size - 100
+    if _resize:
+        _num_extra_ids = 100 - (sp_size - base_size)
+        if show_extra:
+            logging.info(f'Showing Extra Tokens')
+            for i, piece in enumerate(m.pieces[base_size:]):
+                logging.info(f'{i+base_size}: {piece.piece}')
+
+    logging.info(f'Extra IDs: {_num_extra_ids}. SPE Model Size: {sp_size}')
+
+
+def set_vocab(vocab_path, show_extra=True):
+    global _vocab_path
+    if _vocab_path and _vocab_path == vocab_path:
+        return
+    if not File.exists(vocab_path):
+        logging.error(f'Error Setting vocab. Path does not exist: {vocab_path}')
+        raise ValueError
+    _vocab_path = vocab_path
+    calculate_extra_ids(show_extra)
+
+
+def create_sp_model(save_path, special_tokens=None, base_model='default', set_as_global=True, overwrite=False):
+    if not save_path.endswith('.model'):
+        save_path = File.join(save_path, 'sentencepiece.model')
+    if File.exists(save_path) and not overwrite:
+        logging.info(f'save_path = {save_path} exists and overwrite = False.')
+        if set_as_global:
+            logging.info(f'Setting to Global and Returning')
+            set_vocab(save_path)
+        return
+    if base_model not in ['default', 'multi']:
+        assert File.exists(base_model)
+        m = load_sp_model(base_model)
+    else:
+        m = load_sp_model(_default_sp_models[base_model]['path'])
+    base_size = len(m.pieces)
+    logging.info(f'SP Model Size: {base_size}')
+    if special_tokens:
+        tokens_to_remove = []
+        for i, piece in enumerate(m.pieces):
+            if str(piece.piece) in special_tokens:
+                logging.info(f'{i}: {piece.piece} exists in Vocab')
+                tokens_to_remove.append(str(piece.piece))
+        if tokens_to_remove:
+            special_tokens -= tokens_to_remove
+        logging.info(f'Adding {len(special_tokens)} Special Tokens.')
+        for token in special_tokens:
+            new_token = model.ModelProto().SentencePiece()
+            new_token.piece = token
+            new_token.score = 0
+            m.pieces.append(new_token)
+            logging.info(f'Added Token: ID {len(m.pieces)} = {token}')
+        logging.info(f'Updated SP Model Size: {len(m.pieces)}')
+    with File.wb(save_path) as f:
+        f.write(m.SerializeToString())
+    if set_as_global:
+        logging.info(f'Setting {save_path} to Global Vocab')
+        set_vocab(save_path)
+
+
+def default_output_features(input_key='inputs', target_key='targets', vocab_path=None, show_extra=True):
+    if vocab_path:
+        set_vocab(vocab_path, show_extra)
+    assert _vocab_path is not None
+    return {
+        input_key: seqio.Feature(
+            seqio.SentencePieceVocabulary(_vocab_path, extra_ids=_num_extra_ids),
+            add_eos=True, required=False, dtype=tf.int32
+        ),
+        target_key: seqio.Feature(
+            seqio.SentencePieceVocabulary(_vocab_path, extra_ids=_num_extra_ids),
+            add_eos=True, dtype=tf.int32
+        ),
+    }
+
+def t5_preprocessors(input_key='inputs', target_key='targets', is_lm=True, vocab_path=None, show_extra=True):
+    if vocab_path:
+        set_vocab(vocab_path, show_extra)
+    if is_lm:
+        input_key = None
+    return {
+            'unsupervised': [
+                functools.partial(
+                    t5.data.preprocessors.rekey, 
+                    key_map={'inputs': input_key, 'targets': target_key}
+                ),
+                seqio.preprocessors.tokenize,
+                seqio.CacheDatasetPlaceholder(),
+                t5.data.preprocessors.unsupervised,
+                seqio.preprocessors.append_eos_after_trim
+            ],
+            'span_corruption': [
+                functools.partial(
+                    t5.data.preprocessors.rekey, 
+                    key_map={'inputs': input_key, 'targets': target_key}
+                ),
+                seqio.preprocessors.tokenize,
+                seqio.CacheDatasetPlaceholder(),
+                t5.data.preprocessors.span_corruption,
+                seqio.preprocessors.append_eos_after_trim
+            ],
+            'iid_denoising': [
+                functools.partial(
+                    t5.data.preprocessors.rekey, 
+                    key_map={'inputs': input_key, 'targets': target_key}
+                ),
+                seqio.preprocessors.tokenize,
+                seqio.CacheDatasetPlaceholder(),
+                t5.data.preprocessors.iid_denoising,
+                seqio.preprocessors.append_eos_after_trim
+            ],
+            'prefix_lm': [
+                functools.partial(
+                    t5.data.preprocessors.rekey, 
+                    key_map={'inputs': input_key, 'targets': target_key}
+                ),
+                seqio.preprocessors.tokenize,
+                seqio.CacheDatasetPlaceholder(),
+                t5.data.preprocessors.prefix_lm,
+                seqio.preprocessors.append_eos_after_trim
+            ]
+        }
+
+def default_preprocessor(*args, **kwargs):
+    return [
+        seqio.preprocessors.tokenize,
+        seqio.CacheDatasetPlaceholder(),
+        seqio.preprocessors.append_eos_after_trim,
+    ]
+
+def default_metrics(*args, **kwargs):
+    return [t5.evaluation.metrics.bleu, t5.evaluation.metrics.rouge]
+
+_all_task_names = ['default', 'unsupervised', 'span_corruption', 'iid_denoising', 'prefix_lm']
+
+def add_to_registry(data_config, splits={'train': 'train', 'validation': 'train[0:1000'}, preprocessor=None, tasks=['default'], vocab_path=None):
+    global _dataset_registry
+    base_name = data_config['name']
+    is_lm = bool(data_config['classifier'] == 'lm')
+    input_key, target_key = None, None
+    for k,v in data_config['datamap'].items():
+        if v == 'inputs':
+            input_key = k
+        elif v == 'targets':
+            target_key = k
+    logging.info(f'Input Key = {input_key}. Target Key = {target_key}. LM = {is_lm}')
+    all_procs = t5_preprocessors(input_key=input_key, target_key=target_key, is_lm=is_lm, vocab_path=vocab_path)
+    _default_features = default_output_features(input_key=input_key, target_key=target_key, vocab_path=vocab_path)
+    _default_metrics = default_metrics() if not is_lm else []
+    _tasks = []
+    for task in tasks:
+        assert task in _all_task_names, f'Invalid Task: {task}. Valid Tasks: {_all_task_names}'
+        task_name = base_name
+        if task != 'default':
+            task_name += f'_{task}'
+        
+        if task_name in _dataset_registry:
+            logging.error(f'Task: {task_name} already in Dataset Mixtures')
+            continue
+        
+        if task == 'default':
+            seqio.TaskRegistry.add(
+                task_name,
+                source=T5DataSource(config_or_file=data_config, preprocessor=preprocessor, splits=splits),
+                preprocessors=default_preprocessor(),
+                output_features=_default_features,
+                metric_fns=_default_metrics,
+            )
+
+        else:
+            seqio.TaskRegistry.add(
+                task_name,
+                source=T5DataSource(config_or_file=data_config, preprocessor=preprocessor, splits=splits),
+                preprocessors=all_procs[task],
+                output_features=_default_features,
+                metric_fns=_default_metrics,
+            )
+        _tasks.append(task_name)
+    logging.info(f'Added all Tasks: {_tasks}')
+    _dataset_registry.extend(_tasks)
+    
+def remove_from_registry(task_names=None, clear_all=False):
+    global _dataset_registry
+    if not task_names and not clear_all:
+        logging.error(f'Nothing to Remove. Current Registry: {_dataset_registry}')
+        return
+    if task_names:
+        for task in task_names:
+            if task in _dataset_registry:
+                logging.info(f'Removing Task: {task}')
+                seqio.MixtureRegistry.remove(task)
+                _dataset_registry.remove(task)
+            else:
+                logging.info(f'Task {task} not found.')
+    elif clear_all:
+        logging.info(f'Clearing All Tasks from Registry')
+        while _dataset_registry:
+            task = _dataset_registry.pop(0)
+            logging.info(f'Removing Task: {task}')
+            seqio.MixtureRegistry.remove(task)
+
+def add_to_mixture(mixture_name, tasks='all', weight_ratio=(3, 1), weighted_task=None):
+    global _dataset_mixtures
+    if isinstance(tasks, str):
+        tasks = _dataset_registry if tasks == 'all' else [tasks]
+    _mixtures = []
+    for task_name in tasks:
+        if task_name not in _dataset_registry:
+            logging.info(f'Task: {task_name} not in Registry')
+            continue
+        task_weight = weight_ratio[0] if (weighted_task and weighted_task in task_name) else weight_ratio[1]
+        _mixtures.append((task_name, task_weight))
+        logging.info(f'Mixture Task: {task_name} = {task_weight}')
+    logging.info(f'Mixtures Added: {_mixtures}')
+    _dataset_mixtures[mixture_name] = _mixtures
+
+
+def remove_from_mixture(mixture_names=None, clear_all=False):
+    global _dataset_mixtures
+    if not mixture_names and not clear_all:
+        logging.error(f'Nothing to Remove. Current Mixtures: {_dataset_mixtures}')
+        return
+    if mixture_names:
+        if isinstance(mixture_names, str):
+            mixture_names = [mixture_names]
+        for mixture in mixture_names:
+            if mixture in _dataset_mixtures:
+                logging.info(f'Removing Mixture: {mixture}')
+                seqio.MixtureRegistry.remove(mixture)
+                _ = _dataset_mixtures.pop(mixture)
+            else:
+                logging.info(f'Mixture {mixture} not found.')
+    elif clear_all:
+        logging.info(f'Clearing All Mixtures from _dataset_mixtures')
+        all_mixtures = list(_dataset_mixtures.keys())
+        for mixture in all_mixtures:
+            logging.info(f'Removing Mixture: {mixture}: {_dataset_mixtures[mixture]}')
+            _ = _dataset_mixtures.pop(mixture)
+            seqio.MixtureRegistry.remove(mixture)
+
+
+def get_registry():
+    logging.info(f'All Registry: {_dataset_registry}')
+    return _dataset_registry
+
+def get_mixtures():
+    logging.info(f'All Mixtures: {_dataset_mixtures}')
+    return _dataset_mixtures
+
+def sample_registry(num_samples=15, split='train', seq_lengths={'inputs': 512, 'targets': 1024}, printer=pprint, return_samples=True):
+    printer(f'Sampling Registry')
+    enable_v2_behavior()
+    _samples = {}
+    for task_name in _dataset_registry:
+        _samples[task_name] = {}
+        printer(f'{num_samples} Examples from {task_name}')
+        td = seqio.get_mixture_or_task(task_name).get_dataset(sequence_length=seq_lengths, split=split)
+        for x, ex in zip(range(num_samples), td.as_numpy_iterator()):
+            printer(ex)
+            _samples[task_name][x] = ex
+        printer(('----' * 15))
+    if return_samples:
+        return _samples
+
+def sample_mixture(num_samples=15, split='train', seq_lengths={'inputs': 512, 'targets': 1024}, printer=pprint, return_samples=True):
+    printer(f'Sampling Mixtures')
+    enable_v2_behavior()
+    _samples = {}
+    for mixture_name in list(_dataset_mixtures.keys()):
+        _samples[mixture_name] = {}
+        printer(f'{num_samples} Examples from {mixture_name}')
+        td = seqio.get_mixture_or_task(mixture_name).get_dataset(sequence_length=seq_lengths, split=split)
+        for x, ex in zip(range(num_samples), td.as_numpy_iterator()):
+            printer(ex)
+            _samples[mixture_name][x] = ex
+        printer(('----' * 15))
+    if return_samples:
+        return _samples
