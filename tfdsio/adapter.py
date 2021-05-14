@@ -34,7 +34,7 @@ _default_sp_models = {
     },
     'multi': {
         'path': 'gs://t5-data/vocabs/mc4.250000.100extra/sentencepiece.model',
-        'size': 250000
+        'size': 250100
     }
 }
 
