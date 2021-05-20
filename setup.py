@@ -27,7 +27,7 @@ setup(
     author='Tri Songz',
     author_email='ts@growthengineai.com',
     url='http://github.com/trisongz/tfdsio',
-    python_requires='>3.6',
+    python_requires='>=3.6',
     install_requires=[
         "tensorflow>=1.15.0",
         "tensorflow_datasets>=4.2.0",
