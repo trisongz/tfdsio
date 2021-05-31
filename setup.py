@@ -11,7 +11,7 @@ packages = find_packages(
     include=[package_name, "{}.*".format(package_name)]
 )
 
-__version_info__ = (0, 0, 5)
+__version_info__ = (0, 0, 6)
 version = ".".join(map(str, __version_info__))
 binary_names = [package_name]
 

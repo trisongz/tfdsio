@@ -11,12 +11,6 @@ contain only what you need to train your models, ensuring a more efficient data 
 
 * Single function call to return a custom tensorflow_dataset/tf.data.Dataset object (or as numpy iterator/pandas dataframe)
 * Efficiently read `text`, `csv`, `jsonl` files.
-* Enables efficient chained functional operators by leveraging a modified [PyFunctional](https://github.com/trisongz/PyFunctional) for preprocessing
-    * Chained operators: `seq(1, 2, 3).map(lambda x: x * 2).reduce(lambda x, y: x + y)`
-    * Expressive and feature complete API
-    * Read and write `text`, `csv`, `json`, `jsonl`, `sqlite`, `gzip`, `bz2`, and `lzma/xz` files
-    * Parallelize "embarrassingly parallel" operations like `map` easily
-    * More examples available in [PyFunctional](https://github.com/trisongz/PyFunctional) repo
 * Support for loading `tfdsio` datasets in other formats through Custom Adapters
     *  `text-to-text-transformers`
     *  `torch` (WIP)
@@ -63,7 +57,6 @@ process_args: Optional[Any] = None # Args passed to your preprocessor function
 ## Examples
 `tfdsio` aims to make it simple to turn your custom dataset into a training ready data pipeline. 
 Built into `tfdsio` include useful utilities to allow working with GCS storage/Files much easier 
-along with `PyFunctional` to enable efficient data processing pipelines.
 
 ### Minimal Example
 ```python
@@ -226,5 +219,5 @@ and I recommend checking them out as well!
 
 * [tensorflow-datasets](https://github.com/tensorflow/datasets)
 * [text-to-text-transformers](https://github.com/google-research/text-to-text-transfer-transformer/)
-* [EntilZha: PyFunctional](https://github.com/EntilZha/PyFunctional/)
 * [rwightman](https://github.com/rwightman/pytorch-image-models/)
+* [TPU Research Cloud](https://sites.research.google/trc/)
