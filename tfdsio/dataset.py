@@ -172,6 +172,7 @@ class TFDSIOCorpus(tfds.core.GeneratorBasedBuilder):
         
         try:
             self._file_format = file_adapters.FileFormat(file_format)
+            self.info.file_format = self._file_format
         except ValueError:
             all_values = [f.value for f in file_adapters.FileFormat]
             raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}")
