@@ -60,7 +60,7 @@ class BuilderConfig:
     supported_versions: List[str] = None
     description: Optional[str] = ''
     dataset_urls: Optional[Any] = None
-    file_format: Optional[str] = 'tfrecord'
+    file_format: Optional[str] = None
     dataset_format: Optional[str] = 'jsonlines'
     features: Optional[Any] = None
     datamap: Optional[Any] = None
@@ -159,7 +159,8 @@ class TFDSIOCorpus(tfds.core.GeneratorBasedBuilder):
         elif os.environ.get('GCS_DIR', None):
             config.data_dir = os.fspath(os.environ['GCS_DIR'])
 
-        file_format = kwargs.get('file_format', file_adapters.DEFAULT_FILE_FORMAT)
+        file_format = config.file_format or file_adapters.DEFAULT_FILE_FORMAT
+        #kwargs.get('file_format', file_adapters.DEFAULT_FILE_FORMAT)
         self._original_state = dict(data_dir=config.data_dir, config=config, version=config.version)
         self._builder_config = self._create_builder_config(config)
         self.__dict__['name'] = self._builder_config.name
