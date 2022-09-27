@@ -61,7 +61,7 @@ def hf_tfds_dataset(
     """
     Wrapper Function that quickly creates a TFDSIO Dataset
     """
-    if isinstance(config_or_file, str, dict):
+    if isinstance(config_or_file, (str, dict)):
         config = BuilderConfig()
         config.from_auto(config_or_file)
 
