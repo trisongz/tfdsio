@@ -15,6 +15,7 @@ from tensorflow.python.framework.dtypes import (
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core import constants
 from tensorflow_datasets.core import file_adapters
+from tensorflow_datasets.core.utils import file_utils
 from tensorflow_datasets.core.utils import Version, version
 from tensorflow_datasets.core.download import DownloadManager
 
@@ -399,8 +400,8 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         given_data_dir = config.data_dir
         builder_dir = self._relative_data_dir(with_version=False)
         version_dir = self._relative_data_dir(with_version=True)
-        default_data_dir = constants.get_default_data_dir(given_data_dir=given_data_dir)
-        all_data_dirs = constants.list_data_dirs(given_data_dir=given_data_dir)
+        default_data_dir = file_utils.get_default_data_dir(given_data_dir=given_data_dir)
+        all_data_dirs = file_utils.list_data_dirs(given_data_dir=given_data_dir)
         all_versions = set()
         requested_version_dirs = {}
         for data_dir_root in all_data_dirs:
