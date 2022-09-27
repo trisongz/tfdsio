@@ -1,0 +1,30 @@
+name: TFDSIO PyPi
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tfdsio/**"
+      - "setup.py"
+      - ".github/workflows/pypi_publish.yaml"
+
+jobs:
+  build-tfdsio-pypi:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    
+    - run: pip install -U twine
+    - run: python setup.py sdist
+      env:
+        GITHUB_REF: ${{ github.ref_name }}
+
+    - name: upload to pypi
+      run: twine upload dist/*
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.personal_pypi_token }}
