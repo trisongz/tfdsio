@@ -137,6 +137,9 @@ class BuilderConfig:
     stream_data: bool = True # Stream data if from GCS / FileLike without Downloading
     preprocessors: Optional[List[Callable]] = None
     preprocessor_kwargs: Optional[Dict[str, Any]] = None
+    
+    # Will re-process the dataset
+    rewrite_existing: bool = False
 
     def get_datasources(
         self, 
@@ -237,13 +240,16 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             config.data_dir = os.fspath(os.environ['TFDS_DIR'])
         elif os.environ.get('GCS_DIR', None):
             config.data_dir = os.fspath(os.environ['GCS_DIR'])
-
+        
         file_format = config.file_format or file_adapters.DEFAULT_FILE_FORMAT
         self._original_state = dict(data_dir = config.data_dir, config = config, version = config.version)
         self._builder_config: BuilderConfig = self._create_builder_config(config)
-        self.__dict__['name'] = self._builder_config.name
+        self.name = self._builder_config.name
         self._version = self._pick_version(config.version)
         self._data_dir_root, self._data_dir = self._build_data_dir(config)
+        if config.rewrite_existing and gfile.Exists(self._data_dir):
+            self._remove_existing_data_dir()
+        
         if gfile.Exists(self._data_dir):
             self.info.read_from_directory(self._data_dir)
             self._log_dataset_info()
@@ -254,10 +260,17 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             self._file_format = file_adapters.FileFormat(file_format)
             self.info.set_file_format(self._file_format)
 
-        except ValueError:
+        except ValueError as e:
             all_values = [f.value for f in file_adapters.FileFormat]
-            raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}")
+            raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}") from e
 
+    def _remove_existing_data_dir(self):
+        """
+        Removes a previously created dataset
+        if config.rewrite_existing is True
+        """
+        logger.warning(f"Removing and overwriting dataset {self.name} at {self._data_dir}")
+        gfile.DeleteRecursively(self._data_dir)
     
     def _log_dataset_info(self):
         msg = "--------------------------------------------\n"
@@ -496,13 +509,16 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
             config.data_dir = os.fspath(os.environ['GCS_DIR'])
         
         self.dataset = dataset
-
         file_format = config.file_format or file_adapters.DEFAULT_FILE_FORMAT
         self._original_state = dict(data_dir = config.data_dir, config = config, version = config.version)
         self._builder_config: BuilderConfig = self._create_builder_config(config)
         self.__dict__['name'] = self._builder_config.name
         self._version = self._pick_version(config.version)
         self._data_dir_root, self._data_dir = self._build_data_dir(config)
+        
+        if config.rewrite_existing and gfile.Exists(self._data_dir):
+            self._remove_existing_data_dir()
+        
         if gfile.Exists(self._data_dir):
             self.info.read_from_directory(self._data_dir)
             self._log_dataset_info()
@@ -513,9 +529,9 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
             self._file_format = file_adapters.FileFormat(file_format)
             self.info.set_file_format(self._file_format)
 
-        except ValueError:
+        except ValueError as e:
             all_values = [f.value for f in file_adapters.FileFormat]
-            raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}")
+            raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}") from e
 
     def map_split_name(self, split: str):
         """

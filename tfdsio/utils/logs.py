@@ -11,6 +11,8 @@ from typing import Any
 
 warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 warnings.filterwarnings('ignore', message='aliases are no longer used by BaseSettings')
+warnings.filterwarnings('ignore', message='please do not use _builder as this may change')
+
 
 LEVEL_COLOR_MAP = {
     "TRACE": "<cyan>",
