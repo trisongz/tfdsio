@@ -8,7 +8,8 @@ from tfdsio.utils import logger
 
 
 def tfds_dataset(
-    config_or_file: Union[Dict[str, Any], str], 
+    config_or_file: Union[BuilderConfig, Dict[str, Any], str], 
+    dataset: Optional[Any] = None,
     preprocessors: Optional[List[Callable]] = None, 
     build: bool = True, 
     to_tfdataset: bool = True, 
@@ -19,9 +20,10 @@ def tfds_dataset(
     """
     Wrapper Function that quickly creates a TFDSIO Dataset
     """
-    config = BuilderConfig()
-    config.from_auto(config_or_file)
-    builder = TFDSDatasetBuilder(config = config, **kwargs)
+    if isinstance(config_or_file, str, dict):
+        config = BuilderConfig()
+        config.from_auto(config_or_file)
+    builder = HFDatasetBuilder(dataset = dataset, config = config, **kwargs) if dataset else TFDSDatasetBuilder(config = config, **kwargs)
     if preprocessors:
         builder.set_preprocessors(preprocessors)
     if build:
@@ -48,7 +50,7 @@ def tfds_sample(dataset, num_samples: int = 5, return_samples: bool = True):
 
 
 def hf_tfds_dataset(
-    config_or_file: Union[Dict[str, Any], str], 
+    config_or_file: Union[BuilderConfig, Dict[str, Any], str], 
     dataset: Any,
     build: bool = True, 
     to_tfdataset: bool = True, 
@@ -59,8 +61,10 @@ def hf_tfds_dataset(
     """
     Wrapper Function that quickly creates a TFDSIO Dataset
     """
-    config = BuilderConfig()
-    config.from_auto(config_or_file)
+    if isinstance(config_or_file, str, dict):
+        config = BuilderConfig()
+        config.from_auto(config_or_file)
+
     builder = HFDatasetBuilder(dataset = dataset, config = config, **kwargs)
     if build:
         build_args = kwargs.get('build_args', {})
