@@ -1,6 +1,6 @@
 import numpy as np
 
-from .base import BuilderConfig, TFDSDatasetBuilder, ShardInfo
+from .base import BuilderConfig, TFDSDatasetBuilder, HFDatasetBuilder, ShardInfo
 from typing import List, Callable, Optional, Union, Dict
 from tfdsio.utils import logger
 from tfdsio.config import TFDSIOConfig
@@ -228,8 +228,8 @@ class LazyTFDSIOLoader(object):
         return dataset_size
 
 
-class LazyTFDSIOLoader(object):
-    """Wrapper for TFDS datasets with memoization and additional functionality.
+class LazyHFTFDSLoader(object):
+    """Wrapper for HF TFDS datasets with memoization and additional functionality.
     Lazily loads info from TFDS and provides memoization to avoid expensive hidden
     file operations. Also provides additional utility methods.
     """
@@ -238,8 +238,8 @@ class LazyTFDSIOLoader(object):
 
     def __init__(
         self, 
+        dataset,
         config_or_file, 
-        preprocessors: Optional[Union[Callable, List[Callable]]] = None, 
         split_map: Optional[Dict[str, str]] = None
     ):
         """LazyTfdsLoader constructor.
@@ -252,7 +252,7 @@ class LazyTFDSIOLoader(object):
         """
         self._config = BuilderConfig()
         self._config.from_auto(config_or_file)
-        self._preprocessors = preprocessors
+        self._dataset = dataset
 
         self._name = self._config.dataset_name
         self._data_dir = self._config.data_dir
@@ -274,8 +274,8 @@ class LazyTFDSIOLoader(object):
     def builder(self):
         builder_key = (self.name, self.data_dir)
         if builder_key not in LazyTFDSIOLoader._MEMOIZED_BUILDERS:
-            LazyTFDSIOLoader._MEMOIZED_BUILDERS[builder_key] = TFDSDatasetBuilder(config=self._config)
-        return LazyTFDSIOLoader._MEMOIZED_BUILDERS[builder_key]
+            LazyHFTFDSLoader._MEMOIZED_BUILDERS[builder_key] = HFDatasetBuilder(config=self._config, dataset=self._dataset)
+        return LazyHFTFDSLoader._MEMOIZED_BUILDERS[builder_key]
 
     @property
     def info(self):
@@ -306,9 +306,7 @@ class LazyTFDSIOLoader(object):
             input_pipeline_id = shard_info.index
             ) if shard_info else None
         
-        builder = TFDSDatasetBuilder(config=self._config)
-        if self._preprocessors:
-            builder.set_preprocessors(self._preprocessors)
+        builder = HFDatasetBuilder(config=self._config)
         builder.download_and_prepare()
         return builder.as_dataset(
             split = split, 

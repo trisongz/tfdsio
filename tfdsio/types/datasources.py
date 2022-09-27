@@ -8,7 +8,7 @@ from tensorflow.python.data import Dataset
 
 from .registries import DatasetProviderBase
 from .base import Feature, ShardInfo
-from .loaders import LazyTFDSLoader, LazyTFDSIOLoader
+from .loaders import LazyTFDSLoader, LazyTFDSIOLoader, LazyHFTFDSLoader
 
 
 class DataSource(DatasetProviderBase):
@@ -152,6 +152,39 @@ class TFDSIODataSource(DataSource):
     def list_shards(self, split: str) -> Sequence[str]:
         return self.tfds_dataset.files(split)
 
+
+class HFDataSource(DataSource):
+    def __init__(
+        self, 
+        config_or_file: Any, 
+        dataset: Any,
+        splits: Optional[Union[Iterable[str], Mapping[str, str]]] = None,
+    ):
+        self._tfds_dataset = LazyHFTFDSLoader(
+            config_or_file = config_or_file, 
+            dataset = dataset, 
+            split_map = splits if isinstance(splits, dict) else None
+        )
+        super().__init__(splits = splits or ())
+    
+    @property
+    def splits(self):
+        """Overrides since we can't call `info.splits` until after init."""
+        return self._tfds_dataset.info.splits
+
+    @property
+    def tfds_dataset(self):
+        return self._tfds_dataset
+
+    def get_dataset(self, split: str, shuffle: bool = True, seed: Optional[int] = None, shard_info: Optional[ShardInfo] = None) -> Dataset:
+        return self.tfds_dataset.load(split, shuffle_files = shuffle, seed = seed, shard_info = shard_info)
+
+    def num_input_examples(self, split: str) -> int:
+        """Overrides since we can't call `info.splits` until after init."""
+        return self.tfds_dataset.size(split)
+
+    def list_shards(self, split: str) -> Sequence[str]:
+        return self.tfds_dataset.files(split)
 
 # class T5DataSource(DataSource):
 #     def __init__(self, config_or_file: Any, preprocessor: Optional[Any] = None, splits: Optional[Union[Iterable[str], Mapping[str, str]]] = None):

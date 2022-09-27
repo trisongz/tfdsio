@@ -36,7 +36,11 @@ setup(
         "loguru",
     ],
     packages=packages,
-    extras_require={},
+    extras_require={
+        'datasets': [
+            'datasets'
+        ]
+    },
     entry_points={},
     classifiers=[
         "Development Status :: 3 - Alpha",

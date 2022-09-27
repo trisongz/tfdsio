@@ -31,6 +31,11 @@ from tfdsio.utils import logger
 from tfdsio.io import (
     PipelineIO
 )
+try:
+    from datasets import Dataset, DatasetDict
+except ImportError:
+    Dataset = object
+    DatasetDict = object
 
 
 _has_logged_ds_info = set()
@@ -256,7 +261,7 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
     
     def _log_dataset_info(self):
         msg = "--------------------------------------------\n"
-        msg += f"MLX Dataset: {self.info.full_name}\n"
+        msg += f"TFDSIO Dataset: {self.info.full_name}\n"
         msg += "Splits:\n"
         for split, details in self.info.splits.items():
             msg += f" - {split}: {details.num_examples} examples, {details.num_shards} shards\n"
@@ -465,6 +470,94 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
 
     def _info(self) -> DatasetInfo:
         return DatasetInfo(builder = self, **self.builder_config.dataset_info)
+
+
+
+class HFDatasetBuilder(TFDSDatasetBuilder):
+
+    VERSION = None
+    RELEASE_NOTES: ClassVar[Dict[str, str]] = {}
+    SUPPORTED_VERSIONS = []
+    BUILDER_CONFIGS = []
+    MANUAL_DOWNLOAD_INSTRUCTIONS = None
+
+    def __init__(
+        self, 
+        *, 
+        dataset: Union[Dataset, DatasetDict],
+        config: Union[None, str, BuilderConfig] = None, 
+        **kwargs
+    ):
+        if config.data_dir:
+            config.data_dir = os.fspath(config.data_dir)  # Pathlib -> str
+        elif os.environ.get('TFDS_DIR', None):
+            config.data_dir = os.fspath(os.environ['TFDS_DIR'])
+        elif os.environ.get('GCS_DIR', None):
+            config.data_dir = os.fspath(os.environ['GCS_DIR'])
+        
+        self.dataset = dataset
+
+        file_format = config.file_format or file_adapters.DEFAULT_FILE_FORMAT
+        self._original_state = dict(data_dir = config.data_dir, config = config, version = config.version)
+        self._builder_config: BuilderConfig = self._create_builder_config(config)
+        self.__dict__['name'] = self._builder_config.name
+        self._version = self._pick_version(config.version)
+        self._data_dir_root, self._data_dir = self._build_data_dir(config)
+        if gfile.Exists(self._data_dir):
+            self.info.read_from_directory(self._data_dir)
+            self._log_dataset_info()
+        else:
+            self.info.initialize_from_bucket()
+        
+        try:
+            self._file_format = file_adapters.FileFormat(file_format)
+            self.info.set_file_format(self._file_format)
+
+        except ValueError:
+            all_values = [f.value for f in file_adapters.FileFormat]
+            raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}")
+
+    def map_split_name(self, split: str):
+        """
+        Remaps Split Names to the ones used in the dataset
+        """
+        #if 'train' in split:
+        #    return _DataSplits['train']
+        if split in {'dev', 'develop', 'development', 'val', 'validation', 'eval', 'evaluation'}:
+            return _DataSplits['validation']
+        if split in {'test', 'testing'}:
+            return _DataSplits['test']
+        # assume train
+        return _DataSplits['train']
+
+
+    def _split_generators(
+        self, 
+        dl_manager: DownloadManager
+    ):
+        if isinstance(self.dataset, Dataset):
+            self.dataset = DatasetDict({'train': self.dataset})
+        return [
+            tfds.core.SplitGenerator(
+                name = self.map_split_name(split), 
+                gen_kwargs = {
+                    'dataset': self.dataset[split],
+                }
+            ) for split in self.dataset
+        ]
+
+
+    def _generate_examples(
+        self, 
+        dataset: Dataset,
+        **kwargs
+    ):
+        idx = 0
+        for ex in dataset:
+            for (n, i) in self.map_to_features(ex, idx, has_preprocessor = False):
+                yield n, i
+                idx += 1
+
 
 
 __all__ = [

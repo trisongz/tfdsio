@@ -14,16 +14,19 @@ from .types.base import (
     VersionOrStr,
     BuilderConfig,
     TFDSDatasetBuilder,
+    HFDatasetBuilder,
 )
 
 from .types.datasources import (
     TFDSDataSource,
     TFDSIODataSource,
+    HFDataSource,
 )
 
 from .types.loaders import (
     LazyTFDSLoader,
     LazyTFDSIOLoader,
+    LazyHFTFDSLoader,
 )
 
 from .types.vocab import (
@@ -32,7 +35,8 @@ from .types.vocab import (
 
 from .types.wrappers import (
     tfds_dataset,
-    tfds_sample
+    tfds_sample,
+    hf_tfds_dataset
 )
 
 from .utils.helpers import (
