@@ -477,7 +477,7 @@ __all__ = [
     'logger',
     'tfds',
     'DataFeatures',
-    'DataSplits',
+    #'DataSplits',
     'VersionOrStr',
     'BuilderConfig',
     'TFDSDatasetBuilder',
