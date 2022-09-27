@@ -505,7 +505,7 @@ def calculate_extra_ids(show_extra=False):
     if _resize:
         _num_extra_ids = 100 - (sp_size - base_size)
         if show_extra:
-            logging.info(f'Showing Extra Tokens')
+            logging.info(f'Showing {_num_extra_ids} Extra Tokens')
             for i, piece in enumerate(m.pieces[base_size:]):
                 logging.info(f'{i+base_size}: {piece.piece}')
 

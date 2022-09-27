@@ -7,11 +7,9 @@ from setuptools import setup, find_packages
 
 root = os.path.abspath(os.path.dirname(__file__))
 package_name = "tfdsio"
-packages = find_packages(
-    include=[package_name, "{}.*".format(package_name)]
-)
+packages = find_packages(include=[package_name, f"{package_name}.*"])
 
-__version_info__ = (0, 0, 7)
+__version_info__ = (0, 0, 8)
 version = ".".join(map(str, __version_info__))
 binary_names = [package_name]
 
@@ -29,18 +27,16 @@ setup(
     url='http://github.com/trisongz/tfdsio',
     python_requires='>=3.6',
     install_requires=[
-        "tensorflow>=1.15.0",
-        "tensorflow_datasets>=4.2.0",
-        "file-io>=0.1.0",
+        "tensorflow",
+        "tensorflow_datasets",
+        #"file-io>=0.1.0",
         "seqio",
         "t5",
         "sentencepiece",
+        "loguru",
     ],
     packages=packages,
-    extras_require={
-        'transformers': ['transformers', 'sentencepiece'],
-        't5': ['t5', 'seqio'],
-    },
+    extras_require={},
     entry_points={},
     classifiers=[
         "Development Status :: 3 - Alpha",

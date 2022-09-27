@@ -1,4 +1,7 @@
 tensorflow>=2.3.0
-tensorflow_datasets>=4.2.0
-file-io>=0.0.9
+tensorflow_datasets
+t5
+
+#tensorflow_datasets>=4.2.0
+#file-io>=0.0.9
 #PyFunctional @ git+https://github.com/trisongz/PyFunctional
