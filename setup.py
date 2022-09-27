@@ -29,7 +29,7 @@ setup(
     install_requires=[
         "tensorflow",
         "tensorflow_datasets",
-        #"file-io>=0.1.0",
+        #"file-io>=0.1.0", 
         "seqio",
         "t5",
         "sentencepiece",
