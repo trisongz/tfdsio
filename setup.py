@@ -9,7 +9,7 @@ root = os.path.abspath(os.path.dirname(__file__))
 package_name = "tfdsio"
 packages = find_packages(include=[package_name, f"{package_name}.*"])
 
-__version_info__ = (0, 0, 11)
+__version_info__ = (0, 0, 12)
 version = ".".join(map(str, __version_info__))
 binary_names = [package_name]
 
