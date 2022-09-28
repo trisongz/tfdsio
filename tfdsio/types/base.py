@@ -26,7 +26,7 @@ from tensorflow.python.data.ops.readers import TextLineDataset
 from tensorflow.python.data.ops.readers import TFRecordDataset
 from tensorflow.python.framework.ops import enable_eager_execution, disable_eager_execution
 
-from typing import Union, Dict, Any, Optional, List, ClassVar, Callable
+from typing import Union, Dict, Any, Optional, List, ClassVar, Callable, Iterable, Mapping 
 from tfdsio.utils import logger
 from tfdsio.io import (
     PipelineIO
@@ -140,6 +140,9 @@ class BuilderConfig:
     
     # Will re-process the dataset
     rewrite_existing: bool = False
+
+    # For compataibility with tfds
+    splits: Optional[Union[Iterable[str], Mapping[str, str]]] = None
 
     def get_datasources(
         self, 
