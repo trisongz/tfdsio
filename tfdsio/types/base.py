@@ -485,6 +485,18 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         return DatasetInfo(builder = self, **self.builder_config.dataset_info)
 
 
+class HFBuilderConfig(BuilderConfig):
+    """
+    Adds on additional params for HF Datasets
+    """
+    # For Loading the Dataset
+    ds_name: Optional[str] = None
+    ds_load_kwargs: Optional[Dict[str, Any]] = None
+
+    # For Preprocessing the Dataset
+    preprocessors: Optional[List[Dict[str, Union[Callable, Any]]]] = None
+
+
 
 class HFDatasetBuilder(TFDSDatasetBuilder):
 
@@ -497,8 +509,8 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
     def __init__(
         self, 
         *, 
-        dataset: Union[Dataset, DatasetDict],
-        config: Union[None, str, BuilderConfig] = None, 
+        dataset: Union[Dataset, DatasetDict] = None,
+        config: Union[None, str, HFBuilderConfig] = None, 
         **kwargs
     ):
         if config.data_dir:
@@ -511,7 +523,7 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
         self.dataset = dataset
         file_format = config.file_format or file_adapters.DEFAULT_FILE_FORMAT
         self._original_state = dict(data_dir = config.data_dir, config = config, version = config.version)
-        self._builder_config: BuilderConfig = self._create_builder_config(config)
+        self._builder_config: HFBuilderConfig = self._create_builder_config(config)
         self.__dict__['name'] = self._builder_config.name
         self._version = self._pick_version(config.version)
         self._data_dir_root, self._data_dir = self._build_data_dir(config)
@@ -533,6 +545,17 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
             all_values = [f.value for f in file_adapters.FileFormat]
             raise ValueError(f"{file_format} is not a valid format. Valid file formats: {all_values}") from e
 
+    def _load_dataset(self, **kwargs):
+        if not self.dataset:
+            if not self._builder_config.ds_load_kwargs:
+                self._builder_config.ds_load_kwargs = {}
+            if kwargs:
+                self._builder_config.ds_load_kwargs.update(kwargs)
+            logger.info(f'Loading Dataset: {self._builder_config.ds_name} with params {self._builder_config.ds_load_kwargs}')
+            import datasets
+            self.dataset = datasets.load_dataset(self._builder_config.ds_name, **self._builder_config.ds_load_kwargs)
+        return self.dataset
+
     def map_split_name(self, split: str):
         """
         Remaps Split Names to the ones used in the dataset
@@ -551,16 +574,26 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
         self, 
         dl_manager: DownloadManager
     ):
-        if isinstance(self.dataset, Dataset):
-            self.dataset = DatasetDict({'train': self.dataset})
+        dataset = self._load_dataset()
+        if isinstance(dataset, Dataset):
+            dataset = DatasetDict({'train': dataset})
         return [
             tfds.core.SplitGenerator(
                 name = self.map_split_name(split), 
                 gen_kwargs = {
-                    'dataset': self.dataset[split],
+                    'dataset': dataset[split],
                 }
-            ) for split in self.dataset
+            ) for split in dataset
         ]
+    
+
+    def set_preprocessors(self, functions: Union[Callable, List[Dict[str, Union[Callable, Any]]]]):
+        if not self.builder_config.preprocessors:
+            self.builder_config.preprocessors = []
+        if isinstance(functions, list):
+            self.builder_config.preprocessors.extend(functions)
+        else:
+            self.builder_config.preprocessors.append(functions)
 
 
     def _generate_examples(
@@ -569,6 +602,14 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
         **kwargs
     ):
         idx = 0
+        if self.builder_config.preprocessors:
+            # Map the Preprocessors to the Dataset
+            for preprocessor in self.builder_config.preprocessors:
+                if isinstance(preprocessor, dict):
+                    dataset = dataset.map(**preprocessor)
+                else:
+                    dataset = dataset.map(preprocessor)
+
         for ex in dataset:
             for (n, i) in self.map_to_features(ex, idx, has_preprocessor = False):
                 yield n, i
@@ -590,5 +631,7 @@ __all__ = [
     #'DataSplits',
     'VersionOrStr',
     'BuilderConfig',
+    'HFBuilderConfig',
     'TFDSDatasetBuilder',
+    'HFDatasetBuilder',
 ]
