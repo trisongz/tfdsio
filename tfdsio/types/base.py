@@ -551,9 +551,10 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
                 self._builder_config.ds_load_kwargs = {}
             if kwargs:
                 self._builder_config.ds_load_kwargs.update(kwargs)
-            logger.info(f'Loading Dataset: {self._builder_config.ds_name} with params {self._builder_config.ds_load_kwargs}')
+            ds_name = self._builder_config.ds_name or self.name
+            logger.info(f'Loading Dataset: {ds_name} with params {self._builder_config.ds_load_kwargs}')
             import datasets
-            self.dataset = datasets.load_dataset(self._builder_config.ds_name, **self._builder_config.ds_load_kwargs)
+            self.dataset = datasets.load_dataset(ds_name, **self._builder_config.ds_load_kwargs)
         return self.dataset
 
     def map_split_name(self, split: str):
