@@ -7,7 +7,6 @@ from typing import List, Dict, Any, Optional
 
 # Global Configuration Options
 
-
 DEFAULT_PREPROCESSORS = [
     seqio.preprocessors.tokenize,
     seqio.CacheDatasetPlaceholder(),

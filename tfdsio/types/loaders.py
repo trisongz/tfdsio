@@ -1,7 +1,7 @@
 import numpy as np
 
-from .base import BuilderConfig, TFDSDatasetBuilder, HFDatasetBuilder, ShardInfo
-from typing import List, Callable, Optional, Union, Dict
+from .base import BuilderConfig, HFBuilderConfig, TFDSDatasetBuilder, HFDatasetBuilder, ShardInfo
+from typing import List, Callable, Optional, Union, Dict, Any
 from tfdsio.utils import logger
 from tfdsio.config import TFDSIOConfig
 
@@ -127,7 +127,7 @@ class LazyTFDSIOLoader(object):
 
     def __init__(
         self, 
-        config_or_file, 
+        config_or_file: Union[BuilderConfig, str, Dict[str, Any]],
         preprocessors: Optional[Union[Callable, List[Callable]]] = None, 
         split_map: Optional[Dict[str, str]] = None
     ):
@@ -139,8 +139,11 @@ class LazyTFDSIOLoader(object):
             (e.g., 'validation') to TFDS splits or slices
             (e.g., 'train[':1%']).
         """
-        self._config = BuilderConfig()
-        self._config.from_auto(config_or_file)
+        if isinstance(config_or_file, (dict, str)):
+            self._config = BuilderConfig()
+            self._config.from_auto(config_or_file)
+        else: 
+            self._config = config_or_file
         self._preprocessors = preprocessors
 
         self._name = self._config.dataset_name
@@ -238,8 +241,9 @@ class LazyHFTFDSLoader(object):
 
     def __init__(
         self, 
-        dataset,
         config_or_file, 
+        dataset: Optional[Any] = None,
+        preprocessors: Optional[Union[Callable, List[Callable]]] = None, 
         split_map: Optional[Dict[str, str]] = None
     ):
         """LazyTfdsLoader constructor.
@@ -250,9 +254,14 @@ class LazyHFTFDSLoader(object):
             (e.g., 'validation') to TFDS splits or slices
             (e.g., 'train[':1%']).
         """
-        self._config = BuilderConfig()
-        self._config.from_auto(config_or_file)
+        if isinstance(config_or_file, (dict, str)):
+            self._config = HFBuilderConfig()
+            self._config.from_auto(config_or_file)
+        else: 
+            self._config = config_or_file
+        
         self._dataset = dataset
+        self._preprocessors = preprocessors
 
         self._name = self._config.dataset_name
         self._data_dir = self._config.data_dir
@@ -307,6 +316,8 @@ class LazyHFTFDSLoader(object):
             ) if shard_info else None
         
         builder = HFDatasetBuilder(config=self._config)
+        if self._preprocessors:
+            builder.set_preprocessors(self._preprocessors)
         builder.download_and_prepare()
         return builder.as_dataset(
             split = split, 
