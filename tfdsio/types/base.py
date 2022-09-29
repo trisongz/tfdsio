@@ -68,6 +68,7 @@ _DataFeatures: Dict[str, Any] = {
     'image': tfds.features.Image(),
     'label': tfds.features.ClassLabel(),
     'audio': tfds.features.Audio(),
+    'text_list': tfds.features.Sequence(tfds.features.Text()),
     #'sequence': tfds.features.Sequence(tfds.features.Text()),
 }
 
