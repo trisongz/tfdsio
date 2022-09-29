@@ -24,7 +24,9 @@ def tfds_dataset(
     if isinstance(config_or_file, (str, dict)):
         config = HFBuilderConfig() if from_datasets else BuilderConfig()
         config.from_auto(config_or_file)
-    else: config = config_or_file
+    else: 
+        config = config_or_file
+        config.parse_config()
     builder = HFDatasetBuilder(dataset = dataset, config = config, **kwargs) if dataset or from_datasets  else TFDSDatasetBuilder(config = config, **kwargs)
     if preprocessors:
         builder.set_preprocessors(preprocessors)
@@ -67,7 +69,9 @@ def hf_tfds_dataset(
     if isinstance(config_or_file, (str, dict)):
         config = HFBuilderConfig()
         config.from_auto(config_or_file)
-    else: config = config_or_file
+    else: 
+        config = config_or_file
+        config.parse_config()
     builder = HFDatasetBuilder(dataset = dataset, config = config, **kwargs)
     if preprocessors:
         builder.set_preprocessors(preprocessors)

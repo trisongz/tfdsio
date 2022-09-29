@@ -143,6 +143,7 @@ class BuilderConfig:
 
     # For compataibility with tfds
     splits: Optional[Union[Iterable[str], Mapping[str, str]]] = None
+    has_parsed: bool = False
 
     def get_datasources(
         self, 
@@ -175,10 +176,12 @@ class BuilderConfig:
         return dataset_src
 
     def parse_config(self):
+        if self.has_parsed: return
         if self.features: self.features = DataFeatures.to_features(self.features)
         if self.supported_versions is None: self.supported_versions = []
         if self.dataset_urls: self.dataset_urls = self.get_datasources(self.dataset_urls)
         if self.dataset_format: assert self.dataset_format in _FilePipelines, f"Invalid dataset format: {self.dataset_format}. Supported formats: {_FilePipelines.keys()}"
+        self.has_parsed = True
 
     def from_config(self, config: Dict[str, Any]):
         keys = list(self.__dict__.keys())
