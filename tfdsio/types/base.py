@@ -325,13 +325,17 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             if _extra:
                 excluded_paths['extra'] = [i for i in _extra if not i.startswith('http')]
                 _extra = [i for i in _extra if i.startswith('http')]
-            
         
-        dl_paths = dl_manager.download(dataset_urls)
-        msg = f"Downloading Temp Files to:\n"
-        for fs, fn in dl_paths.items():
-            msg += f" - {fs}: {str(fn)}\n"
-        termcolor.cprint(msg)
+        num_download_files = sum(len(v) for v in dataset_urls.values())
+        if num_download_files > 0:
+            dl_paths = dl_manager.download(dataset_urls)
+            msg = f"Downloading Temp Files to:\n"
+            for fs, fn in dl_paths.items():
+                msg += f" - {fs}: {str(fn)}\n"
+            termcolor.cprint(msg)
+        else:
+            dl_paths = dataset_urls
+
         if _extra:
             _extra = dl_manager.download(_extra)
         
