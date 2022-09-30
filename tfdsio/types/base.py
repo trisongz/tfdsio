@@ -413,12 +413,14 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         pipeline = _FilePipelines[self.builder_config.dataset_format](paths)
         for ex in pipeline:
             if not self.builder_config.preprocessors:
+                if not ex: continue
                 for (n, i) in self.map_to_features(ex, idx, has_preprocessor = False):
                     yield n, i
                     idx += 1
             else:
                 for preprocessor in self.builder_config.preprocessors:
                     ex = preprocessor(idx = idx, data = ex, extra = extra, **self.get_preprocessor_kwargs(**kwargs))
+                    if not ex: continue
                     for (n, i) in self.map_to_features(ex, idx, has_preprocessor = True):
                         yield n, i
                         idx += 1
@@ -642,6 +644,7 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
                     dataset = dataset.map(preprocessor)
 
         for ex in dataset:
+            if not ex: continue
             for (n, i) in self.map_to_features(ex, idx, has_preprocessor = False):
                 yield n, i
                 idx += 1
