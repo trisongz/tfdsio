@@ -419,9 +419,9 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
                     idx += 1
             else:
                 for preprocessor in self.builder_config.preprocessors:
-                    ex = preprocessor(idx = idx, data = ex, extra = extra, **self.get_preprocessor_kwargs(**kwargs))
-                    if not ex: continue
-                    for (n, i) in self.map_to_features(ex, idx, has_preprocessor = True):
+                    data = preprocessor(idx = idx, data = ex, extra = extra, **self.get_preprocessor_kwargs(**kwargs))
+                    if not data: continue
+                    for (n, i) in self.map_to_features(data, idx, has_preprocessor = True):
                         yield n, i
                         idx += 1
 
