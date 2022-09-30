@@ -364,14 +364,14 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         """
         if isinstance(ex, dict):
             if self.builder_config.datamap:
-                ex = {v: ex.get(k, '') for k,v in self.builder_config.datamap.items()}
+                ex = {v: ex.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
             yield idx, ex
         
         elif isinstance(ex, (list, np.array)) and has_preprocessor:
             # The preprocessor could return a list of permutated examples
             for i in ex:
                 if self.builder_config.datamap:
-                    i = {v: i.get(k, '') for k,v in self.builder_config.datamap.items()}
+                    i = {v: i.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
                 yield idx, i
                 idx += 1
         
