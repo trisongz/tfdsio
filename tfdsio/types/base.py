@@ -72,6 +72,14 @@ _DataFeatures: Dict[str, Any] = {
     #'sequence': tfds.features.Sequence(tfds.features.Text()),
 }
 
+_DefaultNullValues: Dict[str, Any] = {
+    'text': '',
+    'image': None,
+    'label': -1,
+    'audio': None,
+    'text_list': [],
+}
+
 _FilePipelines: Dict[str, Callable] = {
     'text': PipelineIO.get_text_reader,
     'textlines': PipelineIO.get_textline_reader,
@@ -127,6 +135,8 @@ class BuilderConfig:
     file_format: Optional[str] = None
     dataset_format: Optional[str] = 'jsonlines'
     features: Optional[Any] = None
+
+    _features: Optional[Any] = None
     datamap: Optional[Any] = None
     supervised_keys: Optional[Any] = None
     homepage: Optional[str] = ''
@@ -178,7 +188,9 @@ class BuilderConfig:
 
     def parse_config(self):
         if self.has_parsed: return
-        if self.features: self.features = DataFeatures.to_features(self.features)
+        if self.features: 
+            self._features = self.features
+            self.features = DataFeatures.to_features(self.features)
         if self.supported_versions is None: self.supported_versions = []
         if self.dataset_urls: self.dataset_urls = self.get_datasources(self.dataset_urls)
         if self.dataset_format: assert self.dataset_format in _FilePipelines, f"Invalid dataset format: {self.dataset_format}. Supported formats: {_FilePipelines.keys()}"
@@ -364,14 +376,21 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         """
         if isinstance(ex, dict):
             if self.builder_config.datamap:
-                ex = {v: ex.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
+                ex = {
+                    v: ex.get(k, _DefaultNullValues[self.builder_config._features[v]]) or _DefaultNullValues[self.builder_config._features[v]] 
+                    for k,v in self.builder_config.datamap.items()
+                }
             yield idx, ex
         
         elif isinstance(ex, (list, np.array)) and has_preprocessor:
             # The preprocessor could return a list of permutated examples
             for i in ex:
                 if self.builder_config.datamap:
-                    i = {v: i.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
+                    i = {
+                        v: i.get(k, _DefaultNullValues[self.builder_config._features[v]]) or _DefaultNullValues[self.builder_config._features[v]] 
+                        for k,v in self.builder_config.datamap.items()
+                    }
+                    #i = {v: i.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
                 yield idx, i
                 idx += 1
         
