@@ -17,9 +17,24 @@ class DataSource(DatasetProviderBase):
     those overidden below.
     """
 
-    def __init__(self, splits: Iterable[str], num_input_examples: Optional[Mapping[str, int]] = None):
+    def __init__(
+        self, 
+        splits: Iterable[str], 
+        num_input_examples: Optional[Mapping[str, int]] = None,
+        caching_permitted: bool = True
+    ):
         self._splits = tuple(splits)
         self._num_input_examples = (dict(num_input_examples) if num_input_examples is not None else None)
+        self._caching_permitted = caching_permitted
+
+    @property
+    def caching_permitted(self) -> bool:
+        """Indicates whether this data source may be cached.
+
+        Caching may be prohibited for the sake of data versioning rigor or as a
+        matter of policy for certain datasets.
+        """
+        return self._caching_permitted
 
     @property
     def splits(self) -> Sequence[str]:
