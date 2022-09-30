@@ -136,7 +136,7 @@ class BuilderConfig:
     dataset_format: Optional[str] = 'jsonlines'
     features: Optional[Any] = None
 
-    _features: Optional[Any] = None
+    src_features: Optional[Any] = None
     datamap: Optional[Any] = None
     supervised_keys: Optional[Any] = None
     homepage: Optional[str] = ''
@@ -189,7 +189,7 @@ class BuilderConfig:
     def parse_config(self):
         if self.has_parsed: return
         if self.features: 
-            self._features = self.features
+            self.src_features = self.features
             self.features = DataFeatures.to_features(self.features)
         if self.supported_versions is None: self.supported_versions = []
         if self.dataset_urls: self.dataset_urls = self.get_datasources(self.dataset_urls)
@@ -377,7 +377,7 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
         if isinstance(ex, dict):
             if self.builder_config.datamap:
                 ex = {
-                    v: ex.get(k, _DefaultNullValues[self.builder_config._features[v]]) or _DefaultNullValues[self.builder_config._features[v]] 
+                    v: ex.get(k, _DefaultNullValues[self.builder_config.src_features[v]]) or _DefaultNullValues[self.builder_config.src_features[v]] 
                     for k,v in self.builder_config.datamap.items()
                 }
             yield idx, ex
@@ -387,7 +387,7 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
             for i in ex:
                 if self.builder_config.datamap:
                     i = {
-                        v: i.get(k, _DefaultNullValues[self.builder_config._features[v]]) or _DefaultNullValues[self.builder_config._features[v]] 
+                        v: i.get(k, _DefaultNullValues[self.builder_config.src_features[v]]) or _DefaultNullValues[self.builder_config.src_features[v]] 
                         for k,v in self.builder_config.datamap.items()
                     }
                     #i = {v: i.get(k, '') or '' for k,v in self.builder_config.datamap.items()}
