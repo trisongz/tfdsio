@@ -36,6 +36,11 @@ class DataSource(DatasetProviderBase):
         """
         return self._caching_permitted
 
+
+    @property
+    def supports_arbitrary_sharding(self) -> bool:
+        return False
+
     @property
     def splits(self) -> Sequence[str]:
         return self._splits
