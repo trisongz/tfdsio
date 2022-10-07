@@ -516,7 +516,7 @@ class TFDSDatasetBuilder(tfds.core.GeneratorBasedBuilder):
     def _info(self) -> DatasetInfo:
         return DatasetInfo(builder = self, **self.builder_config.dataset_info)
 
-
+@dataclasses.dataclass
 class HFBuilderConfig(BuilderConfig):
     """
     Adds on additional params for HF Datasets
