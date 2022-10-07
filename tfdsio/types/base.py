@@ -523,6 +523,7 @@ class HFBuilderConfig(BuilderConfig):
     """
     # For Loading the Dataset
     ds_name: Optional[str] = None
+    ds_args: Optional[List[Any]] = None
     ds_load_kwargs: Optional[Dict[str, Any]] = None
 
     # For Preprocessing the Dataset
@@ -584,9 +585,10 @@ class HFDatasetBuilder(TFDSDatasetBuilder):
             if kwargs:
                 self._builder_config.ds_load_kwargs.update(kwargs)
             ds_name = self._builder_config.ds_name or self.name
-            logger.info(f'Loading Dataset: {ds_name} with params {self._builder_config.ds_load_kwargs}')
+            ds_args = self._builder_config.ds_args or []
+            logger.info(f'Loading Dataset: {ds_name} with args: {ds_args}, params {self._builder_config.ds_load_kwargs}')
             import datasets
-            self.dataset = datasets.load_dataset(ds_name, **self._builder_config.ds_load_kwargs)
+            self.dataset = datasets.load_dataset(ds_name, *ds_args, **self._builder_config.ds_load_kwargs)
         return self.dataset
 
     def map_split_name(self, split: str):
